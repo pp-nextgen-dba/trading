@@ -153,6 +153,51 @@
       margin-top: 16px;
     }
 
+    .comparison-section {
+      margin-top: 16px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .section-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .volume-summary strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 26px;
+      line-height: 1.1;
+    }
+
+    .volume-summary span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -337,6 +382,7 @@
 
     table {
       width: 100%;
+      min-width: 760px;
       border-collapse: collapse;
     }
 
@@ -368,6 +414,10 @@
       }
 
       .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -568,6 +618,53 @@
         </article>
       </aside>
     </section>
+
+    <section class="panel comparison-section" id="volumeComparison">
+      <div class="section-head">
+        <div>
+          <h2>Last Week Volume Comparison</h2>
+          <p id="volumeComparisonStatus">Compare TSLA, NVDA, and AMD using the latest five trading sessions.</p>
+        </div>
+        <button id="refreshVolumeComparison" class="btn primary" type="button">Refresh Volume</button>
+      </div>
+
+      <div id="volumeSummary" class="summary-grid" aria-label="Volume comparison summary">
+        <article class="panel volume-summary">
+          <span>TSLA 5-day volume</span>
+          <strong>-</strong>
+          <p class="muted">Waiting for refresh.</p>
+        </article>
+        <article class="panel volume-summary">
+          <span>NVDA 5-day volume</span>
+          <strong>-</strong>
+          <p class="muted">Waiting for refresh.</p>
+        </article>
+        <article class="panel volume-summary">
+          <span>AMD 5-day volume</span>
+          <strong>-</strong>
+          <p class="muted">Waiting for refresh.</p>
+        </article>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>TSLA Volume</th>
+              <th>NVDA Volume</th>
+              <th>AMD Volume</th>
+              <th>Highest Volume</th>
+            </tr>
+          </thead>
+          <tbody id="volumeComparisonBody">
+            <tr>
+              <td colspan="5">Click Refresh Volume to load the latest five trading sessions.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -625,6 +722,10 @@
     const journalTitle = document.querySelector("#journalTitle");
     const journalBody = document.querySelector("#journalBody");
     const journalList = document.querySelector("#journalList");
+    const refreshVolumeComparison = document.querySelector("#refreshVolumeComparison");
+    const volumeComparisonStatus = document.querySelector("#volumeComparisonStatus");
+    const volumeSummary = document.querySelector("#volumeSummary");
+    const volumeComparisonBody = document.querySelector("#volumeComparisonBody");
 
     let journal = [];
 
@@ -745,6 +846,87 @@
       }
     }
 
+    async function fetchDailyVolumes(tickerSymbol) {
+      const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${tickerSymbol}?range=10d&interval=1d`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Volume request failed for ${tickerSymbol}`);
+
+      const json = await response.json();
+      const result = json.chart && json.chart.result && json.chart.result[0];
+      if (!result || !result.timestamp || !result.indicators || !result.indicators.quote) {
+        throw new Error(`Volume data missing for ${tickerSymbol}`);
+      }
+
+      const quote = result.indicators.quote[0];
+      return result.timestamp
+        .map((timestamp, index) => {
+          return {
+            date: new Date(timestamp * 1000).toISOString().slice(0, 10),
+            volume: Number(quote.volume[index]),
+            close: Number(quote.close[index])
+          };
+        })
+        .filter((row) => row.date && Number.isFinite(row.volume) && row.volume > 0)
+        .slice(-5);
+    }
+
+    async function refreshVolumes() {
+      const symbols = ["TSLA", "NVDA", "AMD"];
+      volumeComparisonStatus.textContent = "Loading latest daily volume data.";
+      refreshVolumeComparison.disabled = true;
+
+      try {
+        const entries = await Promise.all(symbols.map(async (symbol) => [symbol, await fetchDailyVolumes(symbol)]));
+        const volumeData = Object.fromEntries(entries);
+        renderVolumeSummary(symbols, volumeData);
+        renderVolumeRows(symbols, volumeData);
+        volumeComparisonStatus.textContent = "Source: delayed daily market data. Latest five available trading sessions shown.";
+      } catch (error) {
+        volumeComparisonStatus.textContent = "Volume comparison unavailable. Try again later or check network access.";
+      } finally {
+        refreshVolumeComparison.disabled = false;
+      }
+    }
+
+    function renderVolumeSummary(symbols, volumeData) {
+      volumeSummary.innerHTML = symbols.map((symbol) => {
+        const rows = volumeData[symbol] || [];
+        const total = rows.reduce((sum, row) => sum + row.volume, 0);
+        const average = rows.length ? total / rows.length : 0;
+        return `
+          <article class="panel volume-summary">
+            <span>${symbol} 5-day volume</span>
+            <strong>${formatVolume(total)}</strong>
+            <p class="muted">Average daily volume: ${formatVolume(average)}</p>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderVolumeRows(symbols, volumeData) {
+      const dates = Array.from(new Set(symbols.flatMap((symbol) => volumeData[symbol].map((row) => row.date))))
+        .sort()
+        .slice(-5)
+        .reverse();
+
+      volumeComparisonBody.innerHTML = dates.map((date) => {
+        const volumes = Object.fromEntries(symbols.map((symbol) => {
+          const row = volumeData[symbol].find((item) => item.date === date);
+          return [symbol, row ? row.volume : 0];
+        }));
+        const highest = symbols.reduce((winner, symbol) => volumes[symbol] > volumes[winner] ? symbol : winner, symbols[0]);
+
+        return `
+          <tr>
+            <td>${escapeHtml(date)}</td>
+            <td>${formatVolume(volumes.TSLA)}</td>
+            <td>${formatVolume(volumes.NVDA)}</td>
+            <td>${formatVolume(volumes.AMD)}</td>
+            <td><strong>${highest}</strong></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
     function renderJournal() {
       if (!journal.length) {
         journalList.innerHTML = '<p class="muted">No journal notes yet.</p>';
@@ -762,6 +944,10 @@
 
     function formatMoney(value) {
       return `$${Number(value).toFixed(2)}`;
+    }
+
+    function formatVolume(value) {
+      return Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
     }
 
     function escapeHtml(value) {
@@ -787,6 +973,7 @@
     });
 
     refreshQuote.addEventListener("click", fetchQuote);
+    refreshVolumeComparison.addEventListener("click", refreshVolumes);
 
     journalForm.addEventListener("submit", (event) => {
       event.preventDefault();
