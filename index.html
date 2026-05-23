@@ -198,6 +198,18 @@
       border-radius: 8px;
     }
 
+    .manual-volume {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .manual-volume textarea {
+      min-height: 104px;
+      font-family: Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -622,10 +634,28 @@
     <section class="panel comparison-section" id="volumeComparison">
       <div class="section-head">
         <div>
-          <h2>Last Week Volume Comparison</h2>
-          <p id="volumeComparisonStatus">Compare TSLA, NVDA, and AMD using the latest five trading sessions.</p>
+          <h2>Volume Comparison</h2>
+          <p id="volumeComparisonStatus">Compare current volume and last-week volume for TSLA, NVDA, and AMD.</p>
         </div>
         <button id="refreshVolumeComparison" class="btn primary" type="button">Refresh Volume</button>
+      </div>
+
+      <div id="currentVolumeSummary" class="summary-grid" aria-label="Current volume comparison">
+        <article class="panel volume-summary">
+          <span>TSLA current volume</span>
+          <strong>-</strong>
+          <p class="muted">Waiting for refresh.</p>
+        </article>
+        <article class="panel volume-summary">
+          <span>NVDA current volume</span>
+          <strong>-</strong>
+          <p class="muted">Waiting for refresh.</p>
+        </article>
+        <article class="panel volume-summary">
+          <span>AMD current volume</span>
+          <strong>-</strong>
+          <p class="muted">Waiting for refresh.</p>
+        </article>
       </div>
 
       <div id="volumeSummary" class="summary-grid" aria-label="Volume comparison summary">
@@ -663,6 +693,14 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="manual-volume">
+        <label>
+          Manual volume fallback
+          <textarea id="manualVolumeInput" placeholder="Date,TSLA,NVDA,AMD&#10;2026-05-22,123456789,98765432,76543210&#10;2026-05-21,123456789,98765432,76543210"></textarea>
+        </label>
+        <button id="applyManualVolume" class="btn" type="button">Apply Manual Volume</button>
       </div>
     </section>
   </main>
@@ -724,8 +762,11 @@
     const journalList = document.querySelector("#journalList");
     const refreshVolumeComparison = document.querySelector("#refreshVolumeComparison");
     const volumeComparisonStatus = document.querySelector("#volumeComparisonStatus");
+    const currentVolumeSummary = document.querySelector("#currentVolumeSummary");
     const volumeSummary = document.querySelector("#volumeSummary");
     const volumeComparisonBody = document.querySelector("#volumeComparisonBody");
+    const manualVolumeInput = document.querySelector("#manualVolumeInput");
+    const applyManualVolume = document.querySelector("#applyManualVolume");
 
     let journal = [];
 
@@ -869,22 +910,87 @@
         .slice(-5);
     }
 
+    async function fetchCurrentVolume(tickerSymbol) {
+      const ticker = tickers[tickerSymbol];
+      const response = await fetch(`https://stooq.com/q/l/?s=${ticker.stooq}&f=sd2t2ohlcv&h&e=csv`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Current volume request failed for ${tickerSymbol}`);
+
+      const csv = await response.text();
+      const rows = csv.trim().split("\n");
+      const headers = rows[0].split(",");
+      const values = rows[1].split(",");
+      const data = Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+      const volumeValue = Number(data.Volume);
+
+      if (!Number.isFinite(volumeValue) || volumeValue <= 0) {
+        throw new Error(`Current volume missing for ${tickerSymbol}`);
+      }
+
+      return {
+        symbol: tickerSymbol,
+        date: data.Date,
+        time: data.Time,
+        volume: volumeValue
+      };
+    }
+
     async function refreshVolumes() {
       const symbols = ["TSLA", "NVDA", "AMD"];
-      volumeComparisonStatus.textContent = "Loading latest daily volume data.";
+      volumeComparisonStatus.textContent = "Loading current and historical volume data.";
       refreshVolumeComparison.disabled = true;
 
       try {
-        const entries = await Promise.all(symbols.map(async (symbol) => [symbol, await fetchDailyVolumes(symbol)]));
-        const volumeData = Object.fromEntries(entries);
+        const [currentResults, historyResults] = await Promise.all([
+          Promise.allSettled(symbols.map(async (symbol) => [symbol, await fetchCurrentVolume(symbol)])),
+          Promise.allSettled(symbols.map(async (symbol) => [symbol, await fetchDailyVolumes(symbol)]))
+        ]);
+
+        const currentEntries = currentResults
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value);
+        const currentData = Object.fromEntries(currentEntries);
+        renderCurrentVolumeSummary(symbols, currentData);
+
+        const historyEntries = historyResults
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value);
+        const failed = historyResults
+          .map((result, index) => result.status === "rejected" ? symbols[index] : null)
+          .filter(Boolean);
+
+        if (!historyEntries.length) {
+          renderVolumeSummary(symbols, {});
+          renderVolumeRows(symbols, {});
+          volumeComparisonStatus.textContent = currentEntries.length
+            ? "Current volume loaded. Historical volume unavailable; use manual fallback for last-week comparison."
+            : "Live volume unavailable. Paste CSV in the manual fallback below.";
+          return;
+        }
+
+        const volumeData = Object.fromEntries(historyEntries);
         renderVolumeSummary(symbols, volumeData);
         renderVolumeRows(symbols, volumeData);
-        volumeComparisonStatus.textContent = "Source: delayed daily market data. Latest five available trading sessions shown.";
+        volumeComparisonStatus.textContent = failed.length
+          ? `Current volume and partial historical data loaded. Missing history: ${failed.join(", ")}.`
+          : "Current volume and latest five trading sessions loaded.";
       } catch (error) {
-        volumeComparisonStatus.textContent = "Volume comparison unavailable. Try again later or check network access.";
+        volumeComparisonStatus.textContent = "Live volume unavailable. Paste CSV in the manual fallback below.";
       } finally {
         refreshVolumeComparison.disabled = false;
       }
+    }
+
+    function renderCurrentVolumeSummary(symbols, currentData) {
+      currentVolumeSummary.innerHTML = symbols.map((symbol) => {
+        const item = currentData[symbol];
+        return `
+          <article class="panel volume-summary">
+            <span>${symbol} current volume</span>
+            <strong>${item ? formatVolume(item.volume) : "-"}</strong>
+            <p class="muted">${item ? `${item.date} ${item.time}` : "No current data loaded."}</p>
+          </article>
+        `;
+      }).join("");
     }
 
     function renderVolumeSummary(symbols, volumeData) {
@@ -895,36 +1001,93 @@
         return `
           <article class="panel volume-summary">
             <span>${symbol} 5-day volume</span>
-            <strong>${formatVolume(total)}</strong>
-            <p class="muted">Average daily volume: ${formatVolume(average)}</p>
+            <strong>${rows.length ? formatVolume(total) : "-"}</strong>
+            <p class="muted">${rows.length ? `Average daily volume: ${formatVolume(average)}` : "No data loaded."}</p>
           </article>
         `;
       }).join("");
     }
 
     function renderVolumeRows(symbols, volumeData) {
-      const dates = Array.from(new Set(symbols.flatMap((symbol) => volumeData[symbol].map((row) => row.date))))
+      const dates = Array.from(new Set(symbols.flatMap((symbol) => (volumeData[symbol] || []).map((row) => row.date))))
         .sort()
         .slice(-5)
         .reverse();
 
+      if (!dates.length) {
+        volumeComparisonBody.innerHTML = '<tr><td colspan="5">No volume data loaded. Use Refresh Volume or the manual fallback.</td></tr>';
+        return;
+      }
+
       volumeComparisonBody.innerHTML = dates.map((date) => {
         const volumes = Object.fromEntries(symbols.map((symbol) => {
-          const row = volumeData[symbol].find((item) => item.date === date);
+          const row = (volumeData[symbol] || []).find((item) => item.date === date);
           return [symbol, row ? row.volume : 0];
         }));
-        const highest = symbols.reduce((winner, symbol) => volumes[symbol] > volumes[winner] ? symbol : winner, symbols[0]);
+        const available = symbols.filter((symbol) => volumes[symbol] > 0);
+        const highest = available.length
+          ? available.reduce((winner, symbol) => volumes[symbol] > volumes[winner] ? symbol : winner, available[0])
+          : "-";
 
         return `
           <tr>
             <td>${escapeHtml(date)}</td>
-            <td>${formatVolume(volumes.TSLA)}</td>
-            <td>${formatVolume(volumes.NVDA)}</td>
-            <td>${formatVolume(volumes.AMD)}</td>
+            <td>${volumes.TSLA ? formatVolume(volumes.TSLA) : "-"}</td>
+            <td>${volumes.NVDA ? formatVolume(volumes.NVDA) : "-"}</td>
+            <td>${volumes.AMD ? formatVolume(volumes.AMD) : "-"}</td>
             <td><strong>${highest}</strong></td>
           </tr>
         `;
       }).join("");
+    }
+
+    function applyManualVolumes() {
+      try {
+        const volumeData = parseManualVolumes(manualVolumeInput.value);
+        renderVolumeSummary(["TSLA", "NVDA", "AMD"], volumeData);
+        renderVolumeRows(["TSLA", "NVDA", "AMD"], volumeData);
+        localStorage.setItem("manualVolumeComparison", manualVolumeInput.value);
+        volumeComparisonStatus.textContent = "Manual volume comparison loaded.";
+      } catch (error) {
+        volumeComparisonStatus.textContent = error.message;
+      }
+    }
+
+    function parseManualVolumes(value) {
+      const lines = value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (lines.length < 2) {
+        throw new Error("Manual volume needs a header and at least one data row.");
+      }
+
+      const header = lines[0].split(",").map((item) => item.trim().toUpperCase());
+      const required = ["DATE", "TSLA", "NVDA", "AMD"];
+      if (!required.every((name) => header.includes(name))) {
+        throw new Error("Manual CSV header must be: Date,TSLA,NVDA,AMD");
+      }
+
+      const indexes = Object.fromEntries(required.map((name) => [name, header.indexOf(name)]));
+      const volumeData = { TSLA: [], NVDA: [], AMD: [] };
+
+      lines.slice(1, 6).forEach((line) => {
+        const columns = line.split(",").map((item) => item.trim().replaceAll("_", "").replaceAll(" ", ""));
+        const date = columns[indexes.DATE];
+        ["TSLA", "NVDA", "AMD"].forEach((symbol) => {
+          const volume = Number(columns[indexes[symbol]]);
+          if (date && Number.isFinite(volume) && volume > 0) {
+            volumeData[symbol].push({ date, volume });
+          }
+        });
+      });
+
+      if (!Object.values(volumeData).some((rows) => rows.length)) {
+        throw new Error("Manual CSV did not contain valid positive volume values.");
+      }
+
+      return volumeData;
     }
 
     function renderJournal() {
@@ -974,6 +1137,7 @@
 
     refreshQuote.addEventListener("click", fetchQuote);
     refreshVolumeComparison.addEventListener("click", refreshVolumes);
+    applyManualVolume.addEventListener("click", applyManualVolumes);
 
     journalForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -1025,6 +1189,10 @@
     });
 
     applyTicker(tickers[activeTicker] ? activeTicker : "TSLA");
+    manualVolumeInput.value = localStorage.getItem("manualVolumeComparison") || "";
+    if (manualVolumeInput.value.trim()) {
+      applyManualVolumes();
+    }
   </script>
 </body>
 </html>
