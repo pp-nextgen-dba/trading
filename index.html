@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TSLA Stock Analysis</title>
+  <title>Stock Analysis Dashboard</title>
   <style>
     :root {
       --bg: #f4f6f8;
@@ -96,6 +96,30 @@
       margin: 0;
       color: var(--muted);
       font-size: 14px;
+    }
+
+    .ticker-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+
+    .ticker-btn {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      min-height: 42px;
+      padding: 9px 14px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .ticker-btn.active {
+      background: var(--dark);
+      border-color: var(--dark);
+      color: #fff;
     }
 
     .btn {
@@ -373,18 +397,23 @@
   <header>
     <div class="hero">
       <span class="eyebrow">Ticker Dashboard</span>
-      <h1>TSLA Stock Analysis</h1>
-      <p>Track Tesla price action, technical levels, risk assumptions, catalysts, and your own trading notes in one local page.</p>
+      <h1 id="pageTitle">TSLA Stock Analysis</h1>
+      <p id="pageSubtitle">Track Tesla price action, technical levels, risk assumptions, catalysts, and your own trading notes in one local page.</p>
     </div>
   </header>
 
   <main>
-    <div class="topbar">
-      <p id="quoteStatus">Quote source: waiting for refresh.</p>
-      <button id="refreshQuote" class="btn primary" type="button">Refresh TSLA Quote</button>
+    <div class="ticker-picker" aria-label="Choose stock ticker">
+      <button class="ticker-btn active" type="button" data-ticker="TSLA">TSLA</button>
+      <button class="ticker-btn" type="button" data-ticker="NVDA">NVDA</button>
     </div>
 
-    <section class="grid" aria-label="TSLA quote metrics">
+    <div class="topbar">
+      <p id="quoteStatus">Quote source: waiting for refresh.</p>
+      <button id="refreshQuote" class="btn primary" type="button">Refresh Quote</button>
+    </div>
+
+    <section class="grid" aria-label="Quote metrics">
       <article class="panel metric">
         <span>Last Price</span>
         <strong id="lastPrice">Manual</strong>
@@ -410,9 +439,9 @@
     <section class="layout">
       <div>
         <article class="panel">
-          <h2>Live Chart</h2>
+          <h2 id="chartTitle">Live Chart</h2>
           <div class="chart-frame">
-            <iframe title="TSLA chart" src="https://s.tradingview.com/widgetembed/?symbol=NASDAQ%3ATSLA&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=f1f3f6&studies=%5B%22MASimple%40tv-basicstudies%22%2C%22RSI%40tv-basicstudies%22%5D&theme=light&style=1&timezone=Etc%2FUTC"></iframe>
+            <iframe id="chartFrame" title="TSLA chart" src="https://s.tradingview.com/widgetembed/?symbol=NASDAQ%3ATSLA&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=f1f3f6&studies=%5B%22MASimple%40tv-basicstudies%22%2C%22RSI%40tv-basicstudies%22%5D&theme=light&style=1&timezone=Etc%2FUTC"></iframe>
           </div>
         </article>
 
@@ -423,7 +452,7 @@
             <label class="check-item"><input type="checkbox" data-save="volume"> Breakout or breakdown has stronger-than-average volume.</label>
             <label class="check-item"><input type="checkbox" data-save="support"> Current price is near a clearly defined support or resistance area.</label>
             <label class="check-item"><input type="checkbox" data-save="risk"> Entry, stop loss, target, and position size are defined before trade.</label>
-            <label class="check-item"><input type="checkbox" data-save="catalyst"> Upcoming catalysts are checked: earnings, deliveries, macro events, rates, or major Tesla news.</label>
+            <label class="check-item"><input type="checkbox" data-save="catalyst"> Upcoming catalysts are checked: earnings, company news, macro events, rates, or sector news.</label>
           </div>
         </article>
 
@@ -441,7 +470,7 @@
               <tr>
                 <td>Trend</td>
                 <td>Moving averages, higher highs/lows, trendline breaks.</td>
-                <td>Is TSLA trending, ranging, or reversing?</td>
+                <td>Is the selected stock trending, ranging, or reversing?</td>
               </tr>
               <tr>
                 <td>Momentum</td>
@@ -460,7 +489,7 @@
               </tr>
               <tr>
                 <td>Fundamentals</td>
-                <td>Margins, deliveries, cash flow, vehicle pricing, energy business, autonomy narrative.</td>
+                <td id="fundamentalChecklist">Margins, deliveries, cash flow, vehicle pricing, energy business, autonomy narrative.</td>
                 <td>Does the business story support the chart?</td>
               </tr>
             </tbody>
@@ -541,9 +570,33 @@
   </main>
 
   <script>
-    const storageKey = "tslaAnalysisState";
-    const journalKey = "tslaTradeJournal";
+    const tickers = {
+      TSLA: {
+        name: "Tesla",
+        title: "TSLA Stock Analysis",
+        subtitle: "Track Tesla price action, technical levels, risk assumptions, catalysts, and your own trading notes in one local page.",
+        stooq: "tsla.us",
+        tradingView: "NASDAQ%3ATSLA",
+        fundamentals: "Margins, deliveries, cash flow, vehicle pricing, energy business, autonomy narrative."
+      },
+      NVDA: {
+        name: "NVIDIA",
+        title: "NVDA Stock Analysis",
+        subtitle: "Track NVIDIA price action, AI chip demand, data center momentum, risk assumptions, and your own trading notes in one local page.",
+        stooq: "nvda.us",
+        tradingView: "NASDAQ%3ANVDA",
+        fundamentals: "Data center revenue, AI accelerator demand, gross margin, gaming recovery, supply constraints, export controls."
+      }
+    };
+
+    let activeTicker = localStorage.getItem("activeTicker") || "TSLA";
     const quoteStatus = document.querySelector("#quoteStatus");
+    const pageTitle = document.querySelector("#pageTitle");
+    const pageSubtitle = document.querySelector("#pageSubtitle");
+    const chartTitle = document.querySelector("#chartTitle");
+    const chartFrame = document.querySelector("#chartFrame");
+    const tickerButtons = document.querySelectorAll(".ticker-btn");
+    const fundamentalChecklist = document.querySelector("#fundamentalChecklist");
     const lastPrice = document.querySelector("#lastPrice");
     const quoteTime = document.querySelector("#quoteTime");
     const dayChange = document.querySelector("#dayChange");
@@ -564,7 +617,15 @@
     const journalBody = document.querySelector("#journalBody");
     const journalList = document.querySelector("#journalList");
 
-    let journal = loadJson(journalKey, []);
+    let journal = [];
+
+    function storageKey() {
+      return `${activeTicker.toLowerCase()}AnalysisState`;
+    }
+
+    function journalKey() {
+      return `${activeTicker.toLowerCase()}TradeJournal`;
+    }
 
     function loadJson(key, fallback) {
       try {
@@ -588,11 +649,11 @@
           return items;
         }, {})
       };
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      localStorage.setItem(storageKey(), JSON.stringify(state));
     }
 
     function restoreState() {
-      const state = loadJson(storageKey, {});
+      const state = loadJson(storageKey(), {});
       manualPrice.value = state.manualPrice || "";
       support.value = state.support || "";
       resistance.value = state.resistance || "";
@@ -645,9 +706,10 @@
     }
 
     async function fetchQuote() {
-      quoteStatus.textContent = "Quote source: refreshing from Stooq delayed CSV.";
+      const ticker = tickers[activeTicker];
+      quoteStatus.textContent = `Quote source: refreshing ${activeTicker} from Stooq delayed CSV.`;
       try {
-        const response = await fetch("https://stooq.com/q/l/?s=tsla.us&f=sd2t2ohlcv&h&e=csv", { cache: "no-store" });
+        const response = await fetch(`https://stooq.com/q/l/?s=${ticker.stooq}&f=sd2t2ohlcv&h&e=csv`, { cache: "no-store" });
         if (!response.ok) throw new Error("Quote request failed");
 
         const csv = await response.text();
@@ -667,7 +729,7 @@
         dayChange.className = change >= 0 ? "positive" : "negative";
         dayChangePercent.textContent = `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}% vs open`;
         volume.textContent = Number(data.Volume).toLocaleString();
-        quoteStatus.textContent = "Quote source: Stooq delayed data. Confirm with broker before trading.";
+        quoteStatus.textContent = `Quote source: Stooq delayed data for ${activeTicker}. Confirm with broker before trading.`;
         updateAnalysis();
       } catch (error) {
         quoteStatus.textContent = "Quote source: live refresh blocked or unavailable. Use manual inputs.";
@@ -724,13 +786,49 @@
         body: journalBody.value.trim(),
         date: new Date().toLocaleString()
       }, ...journal];
-      localStorage.setItem(journalKey, JSON.stringify(journal));
+      localStorage.setItem(journalKey(), JSON.stringify(journal));
       journalForm.reset();
       renderJournal();
     });
 
-    restoreState();
-    renderJournal();
+    function applyTicker(tickerSymbol) {
+      activeTicker = tickerSymbol;
+      localStorage.setItem("activeTicker", activeTicker);
+      const ticker = tickers[activeTicker];
+      document.title = `${activeTicker} Stock Analysis`;
+      pageTitle.textContent = ticker.title;
+      pageSubtitle.textContent = ticker.subtitle;
+      chartTitle.textContent = `${activeTicker} Live Chart`;
+      chartFrame.title = `${activeTicker} chart`;
+      chartFrame.src = `https://s.tradingview.com/widgetembed/?symbol=${ticker.tradingView}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=f1f3f6&studies=%5B%22MASimple%40tv-basicstudies%22%2C%22RSI%40tv-basicstudies%22%5D&theme=light&style=1&timezone=Etc%2FUTC`;
+      refreshQuote.textContent = `Refresh ${activeTicker} Quote`;
+      quoteStatus.textContent = `Quote source: ${activeTicker} waiting for refresh.`;
+      fundamentalChecklist.textContent = ticker.fundamentals;
+      tickerButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.ticker === activeTicker);
+      });
+      lastPrice.textContent = "Manual";
+      quoteTime.textContent = "Use refresh or enter values below";
+      dayChange.textContent = "-";
+      dayChange.className = "";
+      dayChangePercent.textContent = "-";
+      volume.textContent = "-";
+      setBias("Neutral", "neutral");
+      riskText.textContent = "Enter price, stop loss, and target to calculate reward/risk.";
+      journal = loadJson(journalKey(), []);
+      restoreState();
+      renderJournal();
+    }
+
+    tickerButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.dataset.ticker === activeTicker) return;
+        saveState();
+        applyTicker(button.dataset.ticker);
+      });
+    });
+
+    applyTicker(tickers[activeTicker] ? activeTicker : "TSLA");
   </script>
 </body>
 </html>
