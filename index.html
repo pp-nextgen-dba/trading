@@ -934,45 +934,93 @@
       };
     }
 
+    async function fetchProxyVolumes(symbols) {
+      const response = await fetch(`/api/volume?symbols=${symbols.join(",")}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Volume proxy unavailable");
+
+      const json = await response.json();
+      if (!Array.isArray(json.quotes)) {
+        throw new Error("Volume proxy returned invalid data");
+      }
+
+      const current = {};
+      const history = {};
+
+      json.quotes.forEach((quote) => {
+        current[quote.symbol] = {
+          symbol: quote.symbol,
+          date: quote.latestTradingDay,
+          time: "Daily chart",
+          volume: Number(quote.volume)
+        };
+        history[quote.symbol] = Array.isArray(quote.candles)
+          ? quote.candles.map((candle) => {
+            return {
+              date: candle.date,
+              volume: Number(candle.volume),
+              close: Number(candle.close)
+            };
+          })
+          : [];
+      });
+
+      return { current, history, source: json.source || "daily chart proxy" };
+    }
+
     async function refreshVolumes() {
       const symbols = ["TSLA", "NVDA", "AMD"];
       volumeComparisonStatus.textContent = "Loading current and historical volume data.";
       refreshVolumeComparison.disabled = true;
 
       try {
-        const [currentResults, historyResults] = await Promise.all([
-          Promise.allSettled(symbols.map(async (symbol) => [symbol, await fetchCurrentVolume(symbol)])),
-          Promise.allSettled(symbols.map(async (symbol) => [symbol, await fetchDailyVolumes(symbol)]))
-        ]);
+        let currentData = {};
+        let volumeData = {};
+        let currentSource = "direct quote fallback";
+        let usedProxyHistory = false;
 
-        const currentEntries = currentResults
-          .filter((result) => result.status === "fulfilled")
-          .map((result) => result.value);
-        const currentData = Object.fromEntries(currentEntries);
+        try {
+          const proxyData = await fetchProxyVolumes(symbols);
+          currentData = proxyData.current;
+          volumeData = proxyData.history;
+          currentSource = "serverless daily chart proxy";
+          usedProxyHistory = true;
+        } catch {
+          const currentResults = await Promise.allSettled(symbols.map(async (symbol) => [symbol, await fetchCurrentVolume(symbol)]));
+          const currentEntries = currentResults
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value);
+          currentData = Object.fromEntries(currentEntries);
+        }
+
         renderCurrentVolumeSummary(symbols, currentData);
 
-        const historyEntries = historyResults
-          .filter((result) => result.status === "fulfilled")
-          .map((result) => result.value);
-        const failed = historyResults
-          .map((result, index) => result.status === "rejected" ? symbols[index] : null)
-          .filter(Boolean);
+        let failed = symbols.filter((symbol) => !(volumeData[symbol] || []).length);
 
-        if (!historyEntries.length) {
+        if (!usedProxyHistory) {
+          const historyResults = await Promise.allSettled(symbols.map(async (symbol) => [symbol, await fetchDailyVolumes(symbol)]));
+          const historyEntries = historyResults
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value);
+          failed = historyResults
+            .map((result, index) => result.status === "rejected" ? symbols[index] : null)
+            .filter(Boolean);
+          volumeData = Object.fromEntries(historyEntries);
+        }
+
+        if (!Object.values(volumeData).some((rows) => rows.length)) {
           renderVolumeSummary(symbols, {});
           renderVolumeRows(symbols, {});
-          volumeComparisonStatus.textContent = currentEntries.length
-            ? "Current volume loaded. Historical volume unavailable; use manual fallback for last-week comparison."
+          volumeComparisonStatus.textContent = Object.keys(currentData).length
+            ? `Current volume loaded from ${currentSource}. Historical volume unavailable; use manual fallback for last-week comparison.`
             : "Live volume unavailable. Paste CSV in the manual fallback below.";
           return;
         }
 
-        const volumeData = Object.fromEntries(historyEntries);
         renderVolumeSummary(symbols, volumeData);
         renderVolumeRows(symbols, volumeData);
         volumeComparisonStatus.textContent = failed.length
-          ? `Current volume and partial historical data loaded. Missing history: ${failed.join(", ")}.`
-          : "Current volume and latest five trading sessions loaded.";
+          ? `Volume loaded from ${currentSource}; missing daily chart data: ${failed.join(", ")}.`
+          : `Current and 5-day volume loaded from ${currentSource}.`;
       } catch (error) {
         volumeComparisonStatus.textContent = "Live volume unavailable. Paste CSV in the manual fallback below.";
       } finally {
