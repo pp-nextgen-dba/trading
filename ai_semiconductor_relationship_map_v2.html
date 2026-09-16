@@ -68,6 +68,7 @@ body{
   opacity:0;animation:pop .5s ease forwards;
 }
 @keyframes pop{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 .box:hover{transform:translate(-50%,-50%) scale(1.05);border-color:rgba(255,255,255,.3);box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
 .box b{display:block;font-size:14.5px;font-weight:650;letter-spacing:-.01em}
 .box small{display:block;color:var(--muted);margin-top:4px;font-size:11px;line-height:1.3}
@@ -78,7 +79,35 @@ body{
 .note{color:var(--muted);font-size:13px;line-height:1.6;margin:14px 2px 0}
 .note b{color:var(--text)}
 
+.dir-legend{display:flex;flex-wrap:wrap;gap:16px;color:var(--muted);font-size:12px;margin-bottom:14px}
+.dir-legend span{display:flex;align-items:center;gap:6px}
+.dir-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.directory{display:flex;flex-direction:column;gap:26px}
+.dir-group{}
+.dir-group-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.dir-group-head i{width:8px;height:8px;border-radius:50%;flex:none}
+.dir-group-head h3{font-size:13.5px;font-weight:650;margin:0;letter-spacing:.01em}
+.dir-group-head span{color:var(--muted);font-size:12px}
+.dir-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.company-card{
+  position:relative;background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+  border:1px solid var(--glass-border);border-radius:16px;padding:16px 17px 15px;
+  opacity:0;animation:cardIn .5s ease forwards;
+  transition:transform .2s ease, border-color .2s ease;
+}
+.company-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.28)}
+.company-card .row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.company-card .name{font-size:15px;font-weight:650;letter-spacing:-.01em}
+.company-card .ticker{font-size:10.5px;color:var(--muted);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:6px;letter-spacing:.03em}
+.company-card .catline{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.company-card .catline i{width:7px;height:7px;border-radius:50%;flex:none}
+.company-card .catline span{font-size:11px;color:var(--muted)}
+.company-card .biz{font-size:12.5px;color:var(--text);opacity:.9;line-height:1.45;margin-bottom:8px}
+.company-card .products{font-size:11.5px;color:var(--muted);line-height:1.5}
+.company-card .products b{color:var(--text);font-weight:600;opacity:.7}
+
 @media(max-width:680px){
+  .dir-grid{grid-template-columns:1fr}
   .flow{height:auto !important;padding:22px 16px;display:flex;flex-direction:column;align-items:center;gap:10px}
   .flow svg,.flow .elabel{display:none}
   .box{position:static;transform:none !important;width:100%;max-width:280px;opacity:1;animation:none}
@@ -100,22 +129,28 @@ body{
 <header class="hero">
   <span class="eyebrow"><i></i>Reference · updated 16 Sep 2026</span>
   <h1>AI Semiconductor Relationships</h1>
-  <p>All nine companies, grouped by how they actually relate — who competes, who supplies, who buys, who licenses.</p>
+  <p>All fourteen companies, grouped by how they actually relate — who competes, who supplies, who buys, who licenses.</p>
 </header>
+
+<section class="flow-section" style="animation-delay:.05s">
+  <div class="flow-head"><h2>Company directory</h2><span class="cap">main business &amp; key products, grouped by role</span></div>
+  <div class="directory" id="directory"></div>
+</section>
 
 <section class="flow-section" style="animation-delay:.1s">
   <div class="flow-head"><span class="dot" style="background:var(--competition);color:var(--competition)"></span><h2>Direct competition</h2><span class="cap">head-to-head product overlap</span></div>
-  <div class="flow pairs" id="f-competition" style="height:500px"></div>
+  <div class="flow pairs" id="f-competition" style="height:760px"></div>
 </section>
 
 <section class="flow-section" style="animation-delay:.2s">
   <div class="flow-head"><span class="dot" style="background:var(--demand);color:var(--demand)"></span><h2>Supply &amp; demand chain</h2><span class="cap">capex funds hyperscaler buying, memory feeds accelerators</span></div>
-  <div class="flow chain" id="f-supplydemand" style="height:340px"></div>
+  <div class="flow chain" id="f-supplydemand" style="height:520px"></div>
+  <p class="note"><b>Note:</b> Tesla also designs its own AI training and inference silicon (Dojo, AI5/AI6) in-house, alongside buying NVIDIA GPUs — so its NVIDIA reliance may shrink over time as that ramps. SpaceX's tie to this chain runs through its 2026 acquisition of xAI, whose Colossus GPU cluster is built on NVIDIA hardware; SpaceX (Nasdaq: SPCX) IPO'd on Nasdaq in June 2026. Apple's AI server chip ("Baltra") is being co-developed with Broadcom, with production targeted for 2027 under a partnership extended through 2031. Microchip supplies PCIe/CXL interconnect and power-control silicon that data centers need regardless of which GPU vendor they buy from.</p>
 </section>
 
 <section class="flow-section" style="animation-delay:.3s">
   <div class="flow-head"><span class="dot" style="background:var(--ip);color:var(--ip)"></span><h2>Architecture &amp; IP</h2><span class="cap">licensing that shapes who builds what</span></div>
-  <div class="flow chain" id="f-ip" style="height:220px"></div>
+  <div class="flow chain" id="f-ip" style="height:250px"></div>
   <p class="note"><b>Note:</b> NVIDIA–AMD is an established rivalry in AI GPUs today; NVIDIA–Arm is newer and less direct — Arm is mainly NVIDIA's architecture licensor (Grace CPU), and only recently has Arm pushed its own compute designs into adjacent territory.</p>
 </section>
 
@@ -123,6 +158,51 @@ body{
 
 <script>
 const palette={competition:'#ff7a9e',ip:'#8f7dff',supply:'#3fe0b0',demand:'#4fb8ff'};
+
+const companies=[
+  {name:'NVIDIA',ticker:'NVDA',cat:'competition',catLabel:'Chipmaker',biz:'AI computing platform & GPU designer',products:'H100/H200/Blackwell GPUs, Grace CPU, CUDA, NVLink networking'},
+  {name:'AMD',ticker:'AMD',cat:'competition',catLabel:'Chipmaker',biz:'CPUs and GPUs',products:'EPYC server CPUs, Ryzen CPUs, Instinct MI-series accelerators, Radeon GPUs'},
+  {name:'Intel',ticker:'INTC',cat:'competition',catLabel:'Chipmaker',biz:'x86 CPUs & chip manufacturing',products:'Xeon, Core CPUs, Gaudi accelerators, in-house foundry'},
+  {name:'Qualcomm',ticker:'QCOM',cat:'competition',catLabel:'Chipmaker',biz:'Mobile chips & wireless tech',products:'Snapdragon chips/modems, AI200/AI250 inference accelerators'},
+  {name:'Marvell',ticker:'MRVL',cat:'competition',catLabel:'Chipmaker',biz:'Data-center silicon',products:'Custom ASICs, optical DSPs, PCIe/CXL switches'},
+  {name:'Broadcom',ticker:'AVGO',cat:'competition',catLabel:'Chipmaker',biz:'Semiconductors & infra software',products:'Custom AI accelerators (incl. Google TPU), networking switches, VMware'},
+  {name:'Arm',ticker:'ARM',cat:'ip',catLabel:'Architecture & IP',biz:"Licenses CPU architecture — doesn't sell chips",products:'Instruction-set architecture, Neoverse server core designs'},
+  {name:'SK hynix',ticker:'000660',cat:'supply',catLabel:'Memory',biz:'Memory chips',products:'DRAM, NAND, HBM'},
+  {name:'Micron',ticker:'MU',cat:'supply',catLabel:'Memory',biz:'Memory chips',products:'DRAM, NAND, HBM'},
+  {name:'Microchip',ticker:'MCHP',cat:'supply',catLabel:'Component supplier',biz:'Analog & embedded chips',products:'Microcontrollers, FPGAs, power ICs, PCIe/CXL retimers'},
+  {name:'Apple',ticker:'AAPL',cat:'demand',catLabel:'Hyperscaler / demand',biz:'Consumer devices',products:'iPhone, Mac, iPad, Apple Silicon (A-/M-series), Baltra AI server chip'},
+  {name:'Microsoft',ticker:'MSFT',cat:'demand',catLabel:'Hyperscaler / demand',biz:'Software & cloud computing',products:'Windows, Office, Azure — major AI accelerator buyer'},
+  {name:'Tesla',ticker:'TSLA',cat:'demand',catLabel:'Hyperscaler / demand',biz:'Electric vehicles & energy',products:'Cars, energy storage, Optimus robot, Dojo/AI5/AI6 chips'},
+  {name:'SpaceX',ticker:'SPCX',cat:'demand',catLabel:'Hyperscaler / demand',biz:'Rockets & satellite internet',products:'Falcon 9/Starship, Starlink; owns xAI (NVIDIA GPU clusters)'}
+];
+const dirEl=document.getElementById('directory');
+const groups=[
+  {cat:'competition',label:'Chipmakers',sub:'design & sell processors or accelerators'},
+  {cat:'supply',label:'Memory & component suppliers',sub:'feed the accelerators everyone else builds'},
+  {cat:'ip',label:'Architecture & IP',sub:'licenses the designs others build on'},
+  {cat:'demand',label:'Hyperscalers & demand drivers',sub:'buy or commission the silicon'}
+];
+let cardIndex=0;
+groups.forEach(g=>{
+  const items=companies.filter(c=>c.cat===g.cat);
+  const group=document.createElement('div');
+  group.className='dir-group';
+  group.innerHTML=`<div class="dir-group-head"><i style="background:${palette[g.cat]}"></i><h3>${g.label}</h3><span>· ${g.sub}</span></div>`;
+  const grid=document.createElement('div');
+  grid.className='dir-grid';
+  items.forEach(c=>{
+    const card=document.createElement('div');
+    card.className='company-card';
+    card.style.animationDelay=(cardIndex++ *0.05).toFixed(2)+'s';
+    card.innerHTML=`
+      <div class="row1"><span class="name">${c.name}</span><span class="ticker">${c.ticker}</span></div>
+      <div class="biz">${c.biz}</div>
+      <div class="products"><b>Products </b>${c.products}</div>`;
+    grid.appendChild(card);
+  });
+  group.appendChild(grid);
+  dirEl.appendChild(group);
+});
 
 function drawFlow(id, W, H, nodes, edges){
   const el = document.getElementById(id);
@@ -212,7 +292,7 @@ function drawFlow(id, W, H, nodes, edges){
   });
 }
 
-drawFlow('f-competition', 900, 500,
+drawFlow('f-competition', 900, 760,
   [
     {id:'intel', x:230, y:60, w:170, h:64, title:'Intel', sub:'x86 CPUs'},
     {id:'amd1', x:670, y:60, w:170, h:64, title:'AMD', sub:'x86 CPUs'},
@@ -221,43 +301,63 @@ drawFlow('f-competition', 900, 500,
     {id:'marvell', x:230, y:320, w:170, h:64, title:'Marvell', sub:'Custom silicon'},
     {id:'broadcom', x:670, y:320, w:170, h:64, title:'Broadcom', sub:'Custom silicon'},
     {id:'nvidia2', x:230, y:440, w:170, h:64, title:'NVIDIA', sub:'Data-center compute'},
-    {id:'arm', x:670, y:440, w:170, h:64, title:'Arm', sub:'Own compute designs'}
+    {id:'arm', x:670, y:440, w:170, h:64, title:'Arm', sub:'Own compute designs'},
+    {id:'micron', x:230, y:560, w:170, h:64, title:'Micron', sub:'DRAM · HBM'},
+    {id:'hynix', x:670, y:560, w:170, h:64, title:'SK hynix', sub:'DRAM · HBM'},
+    {id:'nvidia3', x:230, y:680, w:170, h:64, title:'NVIDIA', sub:'AI inference chips'},
+    {id:'qcom', x:670, y:680, w:170, h:64, title:'Qualcomm', sub:'AI inference chips'}
   ],
   [
     {from:'intel', to:'amd1', cat:'competition', bi:true, label:'x86 CPUs'},
     {from:'amd2', to:'nvidia1', cat:'competition', bi:true, label:'AI accelerators'},
     {from:'marvell', to:'broadcom', cat:'competition', bi:true, label:'custom silicon & networking'},
-    {from:'nvidia2', to:'arm', cat:'competition', bi:true, label:'emerging rivalry'}
+    {from:'nvidia2', to:'arm', cat:'competition', bi:true, label:'emerging rivalry'},
+    {from:'micron', to:'hynix', cat:'competition', bi:true, label:'memory rivals'},
+    {from:'nvidia3', to:'qcom', cat:'competition', bi:true, label:'inference chips · 2026 entrant'}
   ]
 );
 
-drawFlow('f-supplydemand', 900, 340,
+drawFlow('f-supplydemand', 900, 520,
   [
-    {id:'capex', x:450, y:50, w:220, h:60, title:'AI / cloud capex', sub:'Underlying demand engine'},
-    {id:'msft', x:450, y:180, w:200, h:60, title:'Microsoft', sub:'Azure hyperscaler'},
-    {id:'nvidia', x:150, y:305, w:170, h:60, title:'NVIDIA', sub:'Buys HBM from SK hynix'},
-    {id:'amd', x:450, y:305, w:170, h:60, title:'AMD', sub:'Buys HBM from SK hynix'},
-    {id:'marvell', x:750, y:305, w:170, h:60, title:'Marvell', sub:'Custom silicon partner'}
+    {id:'capex', x:475, y:50, w:220, h:60, title:'AI / cloud capex', sub:'Underlying demand engine'},
+    {id:'msft', x:130, y:180, w:150, h:60, title:'Microsoft', sub:'Azure hyperscaler'},
+    {id:'tesla', x:360, y:180, w:150, h:60, title:'Tesla', sub:'AI training compute'},
+    {id:'spacex', x:590, y:180, w:150, h:60, title:'SpaceX', sub:'AI infra via xAI'},
+    {id:'apple', x:820, y:180, w:150, h:60, title:'Apple', sub:'Baltra AI chip'},
+    {id:'nvidia', x:130, y:310, w:150, h:60, title:'NVIDIA', sub:'Buys HBM memory'},
+    {id:'amd', x:360, y:310, w:150, h:60, title:'AMD', sub:'Buys HBM memory'},
+    {id:'marvell', x:590, y:310, w:150, h:60, title:'Marvell', sub:'Custom silicon'},
+    {id:'broadcom', x:820, y:310, w:150, h:60, title:'Broadcom', sub:"Apple's AI ASIC"},
+    {id:'microchip', x:475, y:440, w:190, h:60, title:'Microchip', sub:'Interconnect chips'}
   ],
   [
     {from:'capex', to:'msft', cat:'demand', label:'funds Azure buildout'},
+    {from:'capex', to:'tesla', cat:'demand', label:'funds AI compute buildout'},
+    {from:'capex', to:'spacex', cat:'demand', label:'funds xAI infrastructure'},
+    {from:'capex', to:'apple', cat:'demand', label:'funds custom silicon program'},
+    {from:'capex', to:'microchip', cat:'demand', label:'drives interconnect chip demand'},
     {from:'msft', to:'nvidia', cat:'demand', label:'buys GPUs'},
-    {from:'msft', to:'amd', cat:'demand', label:'buys accelerators'},
-    {from:'msft', to:'marvell', cat:'demand', label:'buys custom silicon'}
+    {from:'msft', to:'amd', cat:'demand'},
+    {from:'msft', to:'marvell', cat:'demand'},
+    {from:'tesla', to:'nvidia', cat:'demand'},
+    {from:'spacex', to:'nvidia', cat:'demand'},
+    {from:'apple', to:'broadcom', cat:'demand', label:'commissions Baltra chip'}
   ]
 );
 
-drawFlow('f-ip', 900, 220,
+drawFlow('f-ip', 900, 250,
   [
     {id:'arm', x:450, y:50, w:180, h:58, title:'Arm', sub:'Architecture & IP licensing'},
-    {id:'intel', x:180, y:175, w:170, h:58, title:'Intel', sub:'x86 pressure'},
-    {id:'amd', x:450, y:175, w:170, h:58, title:'AMD', sub:'x86 pressure'},
-    {id:'nvidia', x:720, y:175, w:170, h:58, title:'NVIDIA', sub:'Grace CPU built on Arm'}
+    {id:'intel', x:130, y:180, w:150, h:58, title:'Intel', sub:'x86 pressure'},
+    {id:'amd', x:350, y:180, w:150, h:58, title:'AMD', sub:'x86 pressure'},
+    {id:'nvidia', x:570, y:180, w:150, h:58, title:'NVIDIA', sub:'Grace CPU built on Arm'},
+    {id:'apple', x:790, y:180, w:150, h:58, title:'Apple', sub:'Apple Silicon'}
   ],
   [
     {from:'arm', to:'intel', cat:'ip', label:'licensing pressure'},
     {from:'arm', to:'amd', cat:'ip', label:'licensing pressure'},
-    {from:'arm', to:'nvidia', cat:'ip', label:'architecture base'}
+    {from:'arm', to:'nvidia', cat:'ip', label:'architecture base'},
+    {from:'arm', to:'apple', cat:'ip', label:'architecture base'}
   ]
 );
 </script>
