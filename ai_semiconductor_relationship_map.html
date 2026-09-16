@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AI Semiconductor Relationships</title>
+<style>
+:root{
+  --text:#f5f4ff;
+  --muted:#a9a6c9;
+  --glass:rgba(255,255,255,.045);
+  --glass-border:rgba(255,255,255,.09);
+  --competition:#ff7a9e;
+  --ip:#8f7dff;
+  --supply:#3fe0b0;
+  --demand:#4fb8ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0b0a18}
+body{
+  color:var(--text);
+  font-family:"Inter",system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  position:relative;
+}
+.blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.35;z-index:0;pointer-events:none}
+.blob1{width:520px;height:520px;background:#5b3df0;top:-160px;left:-120px;animation:drift1 22s ease-in-out infinite}
+.blob2{width:460px;height:460px;background:#00d3c8;bottom:-140px;right:-100px;animation:drift2 26s ease-in-out infinite}
+.blob3{width:380px;height:380px;background:#ff5f95;top:35%;right:15%;animation:drift3 30s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,80px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-70px,-50px)}}
+@keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-40px,60px) scale(1.15)}}
+
+.wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:52px 20px 80px}
+
+.hero{text-align:center;margin-bottom:34px;opacity:0;animation:rise .7s ease forwards}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;letter-spacing:.04em;padding:6px 14px;border:1px solid var(--glass-border);border-radius:999px;background:var(--glass);backdrop-filter:blur(14px)}
+.eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--supply);box-shadow:0 0 10px var(--supply);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.hero h1{
+  font-size:clamp(30px,5vw,50px);margin:16px 0 10px;font-weight:700;letter-spacing:-.02em;
+  background:linear-gradient(100deg,#fff 10%,#c9c3ff 45%,#7fe9db 80%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero p{color:var(--muted);font-size:15.5px;margin:0;max-width:520px;margin-inline:auto;line-height:1.55}
+
+.flow-section{margin-bottom:36px;opacity:0;animation:rise .7s ease forwards}
+.flow-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.flow-head h2{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
+.flow-head .dot{width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.flow-head .cap{color:var(--muted);font-size:13px}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+.flow{
+  position:relative;width:100%;border-radius:24px;
+  background:var(--glass);border:1px solid var(--glass-border);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 20px 60px -20px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.flow svg{position:absolute;inset:0;width:100%;height:100%}
+.box{
+  position:absolute;transform:translate(-50%,-50%) scale(.9);
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+  border:1px solid var(--glass-border);border-radius:14px;
+  padding:13px 15px;text-align:center;
+  transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  opacity:0;animation:pop .5s ease forwards;
+}
+@keyframes pop{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.box:hover{transform:translate(-50%,-50%) scale(1.05);border-color:rgba(255,255,255,.3);box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
+.box b{display:block;font-size:14.5px;font-weight:650;letter-spacing:-.01em}
+.box small{display:block;color:var(--muted);margin-top:4px;font-size:11px;line-height:1.3}
+.elabel{position:absolute;transform:translate(-50%,-50%);font-size:10.5px;color:var(--muted);background:rgba(11,10,24,.85);padding:2px 7px;border-radius:6px;border:1px solid var(--glass-border);white-space:nowrap;backdrop-filter:blur(6px)}
+
+@keyframes flow{to{stroke-dashoffset:-1000}}
+
+.note{color:var(--muted);font-size:13px;line-height:1.6;margin:14px 2px 0}
+.note b{color:var(--text)}
+
+@media(max-width:680px){
+  .flow{height:auto !important;padding:22px 16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .flow svg,.flow .elabel{display:none}
+  .box{position:static;transform:none !important;width:100%;max-width:280px;opacity:1;animation:none}
+  .flow.pairs .box:nth-child(even)::before{content:"⇄ competes with";display:block;color:var(--competition);font-size:11px;margin:-4px 0 6px}
+}
+@media (prefers-reduced-motion: reduce){
+  .blob,.eyebrow i,.box{animation:none;opacity:1}
+  .hero,.flow-section{animation:none;opacity:1}
+}
+</style>
+</head>
+<body>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow"><i></i>Reference · updated 16 Sep 2026</span>
+  <h1>AI Semiconductor Relationships</h1>
+  <p>All nine companies, grouped by how they actually relate — who competes, who supplies, who buys, who licenses.</p>
+</header>
+
+<section class="flow-section" style="animation-delay:.1s">
+  <div class="flow-head"><span class="dot" style="background:var(--competition);color:var(--competition)"></span><h2>Direct competition</h2><span class="cap">head-to-head product overlap</span></div>
+  <div class="flow pairs" id="f-competition" style="height:500px"></div>
+</section>
+
+<section class="flow-section" style="animation-delay:.2s">
+  <div class="flow-head"><span class="dot" style="background:var(--demand);color:var(--demand)"></span><h2>Supply &amp; demand chain</h2><span class="cap">capex funds hyperscaler buying, memory feeds accelerators</span></div>
+  <div class="flow chain" id="f-supplydemand" style="height:340px"></div>
+</section>
+
+<section class="flow-section" style="animation-delay:.3s">
+  <div class="flow-head"><span class="dot" style="background:var(--ip);color:var(--ip)"></span><h2>Architecture &amp; IP</h2><span class="cap">licensing that shapes who builds what</span></div>
+  <div class="flow chain" id="f-ip" style="height:220px"></div>
+  <p class="note"><b>Note:</b> NVIDIA–AMD is an established rivalry in AI GPUs today; NVIDIA–Arm is newer and less direct — Arm is mainly NVIDIA's architecture licensor (Grace CPU), and only recently has Arm pushed its own compute designs into adjacent territory.</p>
+</section>
+
+</div>
+
+<script>
+const palette={competition:'#ff7a9e',ip:'#8f7dff',supply:'#3fe0b0',demand:'#4fb8ff'};
+
+function drawFlow(id, W, H, nodes, edges){
+  const el = document.getElementById(id);
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio','none');
+
+  const defs = document.createElementNS(svgNS,'defs');
+  Object.entries(palette).forEach(([cat,color])=>{
+    const grad=document.createElementNS(svgNS,'linearGradient');
+    grad.setAttribute('id','grad-'+cat);
+    grad.setAttribute('gradientUnits','userSpaceOnUse');
+    [['0%',.15],['50%',1],['100%',.15]].forEach(([off,op])=>{
+      const stop=document.createElementNS(svgNS,'stop');
+      stop.setAttribute('offset',off); stop.setAttribute('stop-color',color); stop.setAttribute('stop-opacity',op);
+      grad.appendChild(stop);
+    });
+    defs.appendChild(grad);
+    const m = document.createElementNS(svgNS,'marker');
+    m.setAttribute('id', 'arrow-'+cat);
+    m.setAttribute('markerWidth','9'); m.setAttribute('markerHeight','9');
+    m.setAttribute('refX','7'); m.setAttribute('refY','4');
+    m.setAttribute('orient','auto');
+    const p = document.createElementNS(svgNS,'path');
+    p.setAttribute('d','M0,0 L8,4 L0,8 Z');
+    p.setAttribute('fill', color);
+    m.appendChild(p); defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  el.appendChild(svg);
+
+  const byId = {}; nodes.forEach(n=>byId[n.id]=n);
+
+  edges.forEach((e,i)=>{
+    const a=byId[e.from], b=byId[e.to];
+    const sameRow = Math.abs(a.y-b.y) < 2;
+    let d, x1,y1,x2,y2;
+    if(sameRow){
+      const leftFirst = a.x < b.x;
+      x1 = leftFirst ? a.x + a.w/2 : a.x - a.w/2; y1 = a.y;
+      x2 = leftFirst ? b.x - b.w/2 : b.x + b.w/2; y2 = b.y;
+      d = `M ${x1} ${y1} L ${x2} ${y2}`;
+    } else {
+      x1 = a.x; y1 = a.y + a.h/2; x2 = b.x; y2 = b.y - b.h/2;
+      const midY = (y1+y2)/2;
+      d = Math.abs(x1-x2)<2 ? `M ${x1} ${y1} L ${x2} ${y2}` : `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+    }
+    // base faint line
+    const base = document.createElementNS(svgNS,'path');
+    base.setAttribute('d', d); base.setAttribute('fill','none');
+    base.setAttribute('stroke', palette[e.cat]); base.setAttribute('stroke-opacity','.15');
+    base.setAttribute('stroke-width', '2');
+    svg.appendChild(base);
+    // animated flow line
+    const path = document.createElementNS(svgNS,'path');
+    path.setAttribute('d', d); path.setAttribute('fill','none');
+    path.setAttribute('stroke', `url(#grad-${e.cat})`);
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('stroke-linecap','round');
+    path.setAttribute('stroke-dasharray','40 260');
+    path.style.animation = `flow ${(5+(i%4)*1.1).toFixed(1)}s linear infinite`;
+    path.style.animationDelay = (-i*0.7).toFixed(1)+'s';
+    path.setAttribute('marker-end', `url(#arrow-${e.cat})`);
+    if(e.bi) path.setAttribute('marker-start', `url(#arrow-${e.cat})`);
+    svg.appendChild(path);
+
+    if(e.label){
+      const lbl=document.createElement('span');
+      lbl.className='elabel';
+      lbl.textContent=e.label;
+      lbl.style.left=((x1+x2)/2/W*100)+'%';
+      lbl.style.top=((y1+y2)/2/H*100)+'%';
+      el.appendChild(lbl);
+    }
+  });
+
+  nodes.forEach((n,i)=>{
+    const box=document.createElement('div');
+    box.className='box';
+    box.style.left=(n.x/W*100)+'%';
+    box.style.top=(n.y/H*100)+'%';
+    box.style.width=n.w+'px';
+    box.style.animationDelay=(i*0.06).toFixed(2)+'s';
+    box.innerHTML = `<b>${n.title}</b>${n.sub?`<small>${n.sub}</small>`:''}`;
+    el.appendChild(box);
+  });
+}
+
+drawFlow('f-competition', 900, 500,
+  [
+    {id:'intel', x:230, y:60, w:170, h:64, title:'Intel', sub:'x86 CPUs'},
+    {id:'amd1', x:670, y:60, w:170, h:64, title:'AMD', sub:'x86 CPUs'},
+    {id:'amd2', x:230, y:190, w:170, h:64, title:'AMD', sub:'AI accelerators'},
+    {id:'nvidia1', x:670, y:190, w:170, h:64, title:'NVIDIA', sub:'AI accelerators'},
+    {id:'marvell', x:230, y:320, w:170, h:64, title:'Marvell', sub:'Custom silicon'},
+    {id:'broadcom', x:670, y:320, w:170, h:64, title:'Broadcom', sub:'Custom silicon'},
+    {id:'nvidia2', x:230, y:440, w:170, h:64, title:'NVIDIA', sub:'Data-center compute'},
+    {id:'arm', x:670, y:440, w:170, h:64, title:'Arm', sub:'Own compute designs'}
+  ],
+  [
+    {from:'intel', to:'amd1', cat:'competition', bi:true, label:'x86 CPUs'},
+    {from:'amd2', to:'nvidia1', cat:'competition', bi:true, label:'AI accelerators'},
+    {from:'marvell', to:'broadcom', cat:'competition', bi:true, label:'custom silicon & networking'},
+    {from:'nvidia2', to:'arm', cat:'competition', bi:true, label:'emerging rivalry'}
+  ]
+);
+
+drawFlow('f-supplydemand', 900, 340,
+  [
+    {id:'capex', x:450, y:50, w:220, h:60, title:'AI / cloud capex', sub:'Underlying demand engine'},
+    {id:'msft', x:450, y:180, w:200, h:60, title:'Microsoft', sub:'Azure hyperscaler'},
+    {id:'nvidia', x:150, y:305, w:170, h:60, title:'NVIDIA', sub:'Buys HBM from SK hynix'},
+    {id:'amd', x:450, y:305, w:170, h:60, title:'AMD', sub:'Buys HBM from SK hynix'},
+    {id:'marvell', x:750, y:305, w:170, h:60, title:'Marvell', sub:'Custom silicon partner'}
+  ],
+  [
+    {from:'capex', to:'msft', cat:'demand', label:'funds Azure buildout'},
+    {from:'msft', to:'nvidia', cat:'demand', label:'buys GPUs'},
+    {from:'msft', to:'amd', cat:'demand', label:'buys accelerators'},
+    {from:'msft', to:'marvell', cat:'demand', label:'buys custom silicon'}
+  ]
+);
+
+drawFlow('f-ip', 900, 220,
+  [
+    {id:'arm', x:450, y:50, w:180, h:58, title:'Arm', sub:'Architecture & IP licensing'},
+    {id:'intel', x:180, y:175, w:170, h:58, title:'Intel', sub:'x86 pressure'},
+    {id:'amd', x:450, y:175, w:170, h:58, title:'AMD', sub:'x86 pressure'},
+    {id:'nvidia', x:720, y:175, w:170, h:58, title:'NVIDIA', sub:'Grace CPU built on Arm'}
+  ],
+  [
+    {from:'arm', to:'intel', cat:'ip', label:'licensing pressure'},
+    {from:'arm', to:'amd', cat:'ip', label:'licensing pressure'},
+    {from:'arm', to:'nvidia', cat:'ip', label:'architecture base'}
+  ]
+);
+</script>
+</body>
+</html>
